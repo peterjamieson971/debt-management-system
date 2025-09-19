@@ -1,0 +1,25 @@
+{
+  "name": "debt-management-system",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A comprehensive debt management system",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "type-check": "turbo type-check",
+    "clean": "turbo clean"
+  },
+  "keywords": ["debt-management", "finance", "monorepo"],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "turbo": "^2.5.6"
+  },
+  "packageManager": "npm@10.0.0"
+}
