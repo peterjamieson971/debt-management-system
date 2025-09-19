@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "supabase": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase",
+        "--project-ref=ozrjovtiypqwaencnbyw"
+      ],
+      "env": {}
+    },
+    "supabase-debt": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase",
+        "--project-ref=ozrjovtiypqwaencnbyw"
+      ],
+      "env": {}
+    }
+  }
+}
