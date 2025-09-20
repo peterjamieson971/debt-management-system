@@ -80,6 +80,18 @@ export default function DashboardPage() {
     router.push('/login')
   }
 
+  const handleCreateNewCase = () => {
+    router.push('/dashboard/cases/new')
+  }
+
+  const handleAddDebtor = () => {
+    router.push('/dashboard/debtors/new')
+  }
+
+  const handleGenerateAIEmail = () => {
+    router.push('/dashboard/communications/compose')
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -195,15 +207,24 @@ export default function DashboardPage() {
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
             <div className="space-y-3">
-              <button className="w-full text-left p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+              <button
+                onClick={handleCreateNewCase}
+                className="w-full text-left p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+              >
                 <div className="font-medium text-blue-900">Create New Case</div>
                 <div className="text-sm text-blue-700">Start a new collection case</div>
               </button>
-              <button className="w-full text-left p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
+              <button
+                onClick={handleAddDebtor}
+                className="w-full text-left p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+              >
                 <div className="font-medium text-green-900">Add Debtor</div>
                 <div className="text-sm text-green-700">Register a new company</div>
               </button>
-              <button className="w-full text-left p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
+              <button
+                onClick={handleGenerateAIEmail}
+                className="w-full text-left p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
+              >
                 <div className="font-medium text-purple-900">Generate AI Email</div>
                 <div className="text-sm text-purple-700">Create personalized collection email</div>
               </button>

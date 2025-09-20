@@ -56,6 +56,10 @@ export default function DebtorsPage() {
     router.push('/login')
   }
 
+  const handleAddDebtor = () => {
+    router.push('/debtors/new')
+  }
+
   const filteredDebtors = debtors.filter(debtor =>
     debtor.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     debtor.primary_contact_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -132,7 +136,7 @@ export default function DebtorsPage() {
             <h2 className="text-2xl font-bold text-gray-900">Debtors</h2>
             <p className="text-gray-600">Manage your company records and contacts</p>
           </div>
-          <Button onClick={() => setShowAddModal(true)} className="bg-blue-600 hover:bg-blue-700">
+          <Button onClick={handleAddDebtor} className="bg-blue-600 hover:bg-blue-700">
             <Plus className="h-4 w-4 mr-2" />
             Add Debtor
           </Button>
@@ -283,7 +287,7 @@ export default function DebtorsPage() {
             <p className="text-gray-600 mb-4">
               {searchTerm ? 'Try adjusting your search terms' : 'Get started by adding your first debtor'}
             </p>
-            <Button onClick={() => setShowAddModal(true)} className="bg-blue-600 hover:bg-blue-700">
+            <Button onClick={handleAddDebtor} className="bg-blue-600 hover:bg-blue-700">
               <Plus className="h-4 w-4 mr-2" />
               Add Debtor
             </Button>

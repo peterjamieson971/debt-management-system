@@ -63,6 +63,10 @@ export default function CasesPage() {
     router.push('/login')
   }
 
+  const handleNewCase = () => {
+    router.push('/cases/new')
+  }
+
   const filteredCases = cases.filter(case_ => {
     const matchesSearch = case_.debtors?.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          case_.notes?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -165,7 +169,7 @@ export default function CasesPage() {
             <h2 className="text-2xl font-bold text-gray-900">Collection Cases</h2>
             <p className="text-gray-600">Manage active debt collection cases</p>
           </div>
-          <Button className="bg-blue-600 hover:bg-blue-700">
+          <Button onClick={handleNewCase} className="bg-blue-600 hover:bg-blue-700">
             <Plus className="h-4 w-4 mr-2" />
             New Case
           </Button>
@@ -347,7 +351,7 @@ export default function CasesPage() {
                 ? 'Try adjusting your search terms or filters'
                 : 'Get started by creating your first collection case'}
             </p>
-            <Button className="bg-blue-600 hover:bg-blue-700">
+            <Button onClick={handleNewCase} className="bg-blue-600 hover:bg-blue-700">
               <Plus className="h-4 w-4 mr-2" />
               New Case
             </Button>
