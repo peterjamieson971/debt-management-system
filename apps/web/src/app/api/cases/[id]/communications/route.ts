@@ -248,10 +248,10 @@ export async function POST(
       }
     })
 
-    // If sending immediately, trigger Zapier workflow
-    let zapierResponse = null
+    // If sending immediately, use Gmail API directly
+    let sendResponse = null
     if (communicationData.send_immediately && communicationData.channel === 'email') {
-      zapierResponse = await triggerZapierEmail(communicationLog, collectionCase.debtors)
+      sendResponse = await sendViaGmail(communicationLog, collectionCase.debtors, authHeader)
     }
 
     // Update case last action date
@@ -268,8 +268,8 @@ export async function POST(
       generated_content: generatedContent,
       ai_cost: aiResult.cost,
       model_used: aiResult.model,
-      zapier_triggered: !!zapierResponse,
-      zapier_task_id: zapierTaskId
+      gmail_sent: !!sendResponse,
+      gmail_message_id: sendResponse?.message_id
     }, { status: 201 })
 
   } catch (error) {
@@ -342,34 +342,46 @@ The content should be in ${language === 'ar' ? 'Arabic' : 'English'} and follow 
   return basePrompt
 }
 
-async function triggerZapierEmail(communicationLog: any, debtor: any) {
+async function sendViaGmail(communicationLog: any, debtor: any, authHeader: string) {
   try {
-    // This would trigger your Zapier webhook to send the email
-    // In a real implementation, you'd call your Zapier webhook URL
-    const zapierWebhookUrl = process.env.ZAPIER_SEND_EMAIL_WEBHOOK_URL
-
-    if (!zapierWebhookUrl) {
-      console.warn('Zapier webhook URL not configured')
-      return null
-    }
-
-    const response = await fetch(zapierWebhookUrl, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/gmail/send`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': authHeader
       },
       body: JSON.stringify({
-        to: debtor.primary_contact_email,
+        organization_id: communicationLog.organization_id,
+        case_id: communicationLog.case_id,
+        debtor_id: communicationLog.debtor_id,
+        to_email: debtor.primary_contact_email,
         subject: communicationLog.subject,
-        content: communicationLog.content,
-        zapier_task_id: communicationLog.zapier_task_id,
-        case_id: communicationLog.case_id
+        content: communicationLog.content
       })
     })
 
-    return response.ok ? await response.json() : null
+    if (response.ok) {
+      const result = await response.json()
+
+      // Update communication log with Gmail details
+      const supabase = await createServiceClient()
+      await supabase
+        .from('communication_logs')
+        .update({
+          status: 'sent',
+          external_id: result.message_id,
+          gmail_message_id: result.message_id,
+          gmail_thread_id: result.thread_id,
+          sent_at: new Date().toISOString()
+        })
+        .eq('id', communicationLog.id)
+
+      return result
+    }
+
+    return null
   } catch (error) {
-    console.error('Failed to trigger Zapier email:', error)
+    console.error('Failed to send email via Gmail:', error)
     return null
   }
 }
