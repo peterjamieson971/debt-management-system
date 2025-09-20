@@ -85,8 +85,8 @@ export async function GET(request: NextRequest) {
       query = query.eq('assigned_to', assigned_to)
     }
 
-    // For demo purposes, using placeholder organization_id
-    query = query.eq('organization_id', 'placeholder-org-id')
+    // Use the sample organization ID from our database
+    query = query.eq('organization_id', '550e8400-e29b-41d4-a716-446655440000')
 
     const { data: cases, error, count } = await query
 
@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
       .from('collection_cases')
       .insert({
         ...caseData,
-        organization_id: 'placeholder-org-id',
+        organization_id: '550e8400-e29b-41d4-a716-446655440000',
         total_amount: totalAmount,
         outstanding_amount: totalAmount,
         status: 'active',
@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
 
     // Log analytics event
     await supabase.from('analytics_events').insert({
-      organization_id: 'placeholder-org-id',
+      organization_id: '550e8400-e29b-41d4-a716-446655440000',
       event_type: 'case_created',
       entity_type: 'collection_case',
       entity_id: collectionCase.id,

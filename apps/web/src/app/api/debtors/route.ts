@@ -92,9 +92,8 @@ export async function GET(request: NextRequest) {
       query = query.eq('risk_profile', risk_profile)
     }
 
-    // For demo purposes, using a placeholder organization_id
-    // In production, this would come from the authenticated user
-    query = query.eq('organization_id', 'placeholder-org-id')
+    // Use the sample organization ID from our database
+    query = query.eq('organization_id', '550e8400-e29b-41d4-a716-446655440000')
 
     const { data: debtors, error, count } = await query
 
@@ -147,12 +146,12 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createServiceClient()
 
-    // For demo purposes, using a placeholder organization_id
+    // Use the sample organization ID from our database
     const { data: debtor, error } = await supabase
       .from('debtors')
       .insert({
         ...debtorData,
-        organization_id: 'placeholder-org-id'
+        organization_id: '550e8400-e29b-41d4-a716-446655440000'
       })
       .select()
       .single()
@@ -167,7 +166,7 @@ export async function POST(request: NextRequest) {
 
     // Log analytics event
     await supabase.from('analytics_events').insert({
-      organization_id: 'placeholder-org-id',
+      organization_id: '550e8400-e29b-41d4-a716-446655440000',
       event_type: 'debtor_created',
       entity_type: 'debtor',
       entity_id: debtor.id,

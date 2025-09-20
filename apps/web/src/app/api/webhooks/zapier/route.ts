@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
-import { generateWithSmartRouting } from '@/lib/ai/router'
-import { PROMPTS } from '@/lib/ai/prompts'
 import { z } from 'zod'
 import crypto from 'crypto'
 
 const webhookSchema = z.object({
-  event: z.enum(['email.received', 'email.bounced', 'payment.received', 'email.sent']),
+  event: z.enum(['email.received', 'email.bounced', 'email.sent']),
   data: z.any()
 })
 
@@ -18,15 +16,6 @@ const emailReceivedSchema = z.object({
   subject: z.string(),
   body: z.string(),
   attachments: z.array(z.any()).optional().default([])
-})
-
-const paymentReceivedSchema = z.object({
-  payment_id: z.string(),
-  debtor_id: z.string(),
-  amount: z.number(),
-  currency: z.string(),
-  reference: z.string(),
-  method: z.string()
 })
 
 function verifyZapierSignature(payload: string, signature: string): boolean {
@@ -63,9 +52,6 @@ export async function POST(request: NextRequest) {
       case 'email.received':
         return await handleEmailReceived(data, supabase)
 
-      case 'payment.received':
-        return await handlePaymentReceived(data, supabase)
-
       case 'email.bounced':
         return await handleEmailBounced(data, supabase)
 
@@ -99,7 +85,7 @@ export async function POST(request: NextRequest) {
 async function handleEmailReceived(data: any, supabase: any) {
   const emailData = emailReceivedSchema.parse(data)
 
-  // Find related collection case based on email thread or subject
+  // Find related collection case based on email address
   const { data: cases } = await supabase
     .from('collection_cases')
     .select(`
@@ -109,32 +95,33 @@ async function handleEmailReceived(data: any, supabase: any) {
     .eq('debtors.primary_contact_email', emailData.from)
 
   if (!cases || cases.length === 0) {
+    // Log as unmatched email for review
+    await supabase.from('communication_logs').insert({
+      organization_id: null, // Will need to be handled by admin
+      channel: 'email',
+      direction: 'inbound',
+      status: 'received',
+      subject: emailData.subject,
+      content: emailData.body,
+      ai_generated: false,
+      metadata: {
+        message_id: emailData.message_id,
+        thread_id: emailData.thread_id,
+        from: emailData.from,
+        unmatched: true
+      }
+    })
+
     return NextResponse.json({
-      processed: false,
-      reason: 'No matching case found'
+      processed: true,
+      matched: false,
+      reason: 'No matching case found - logged for review'
     })
   }
 
   const collectionCase = cases[0]
 
-  // Use AI to analyze the email response
-  const analysisResult = await generateWithSmartRouting(
-    'simple',
-    PROMPTS.responseAnalysis.replace('{{email_content}}', emailData.body),
-    {
-      case: collectionCase,
-      debtor: collectionCase.debtors
-    }
-  )
-
-  let analysis = {}
-  try {
-    analysis = JSON.parse(analysisResult.content)
-  } catch {
-    analysis = { intent: 'unknown', sentiment: 0.5, urgency: 'medium' }
-  }
-
-  // Log the communication
+  // Simply log the communication - no AI processing here
   await supabase.from('communication_logs').insert({
     organization_id: collectionCase.organization_id,
     case_id: collectionCase.id,
@@ -145,99 +132,61 @@ async function handleEmailReceived(data: any, supabase: any) {
     subject: emailData.subject,
     content: emailData.body,
     ai_generated: false,
-    sentiment_score: analysis.sentiment || 0.5,
-    intent_classification: analysis.intent || 'unknown',
-    response_required: analysis.urgency !== 'low',
     metadata: {
       message_id: emailData.message_id,
       thread_id: emailData.thread_id,
-      analysis
+      from: emailData.from
     }
   })
 
-  // Update case based on analysis
-  if (analysis.intent === 'payment_promise') {
-    await supabase
-      .from('collection_cases')
-      .update({
-        payment_promise_date: analysis.promised_date,
-        status: 'promise_received',
-        last_contact_date: new Date().toISOString()
-      })
-      .eq('id', collectionCase.id)
-  }
-
-  return NextResponse.json({
-    processed: true,
-    case_updated: true,
-    analysis
-  })
-}
-
-async function handlePaymentReceived(data: any, supabase: any) {
-  const paymentData = paymentReceivedSchema.parse(data)
-
-  // Create payment record
-  const { data: payment } = await supabase
-    .from('payments')
-    .insert({
-      organization_id: 'placeholder-org-id',
-      debtor_id: paymentData.debtor_id,
-      amount: paymentData.amount,
-      currency: paymentData.currency,
-      payment_method: paymentData.method,
-      reference_number: paymentData.reference,
-      status: 'completed',
-      processed_at: new Date().toISOString()
-    })
-    .select()
-    .single()
-
-  // Update related cases
-  const { data: cases } = await supabase
+  // Update last contact date only
+  await supabase
     .from('collection_cases')
-    .select('*')
-    .eq('debtor_id', paymentData.debtor_id)
-    .eq('status', 'active')
-
-  for (const case_ of cases || []) {
-    const newOutstanding = Math.max(0, case_.outstanding_amount - paymentData.amount)
-    const newStatus = newOutstanding === 0 ? 'resolved' : case_.status
-
-    await supabase
-      .from('collection_cases')
-      .update({
-        outstanding_amount: newOutstanding,
-        status: newStatus
-      })
-      .eq('id', case_.id)
-  }
+    .update({
+      last_contact_date: new Date().toISOString()
+    })
+    .eq('id', collectionCase.id)
 
   return NextResponse.json({
     processed: true,
-    payment_id: payment?.id
+    matched: true,
+    case_id: collectionCase.id
   })
 }
 
 async function handleEmailBounced(data: any, supabase: any) {
-  // Log bounced email
-  await supabase.from('communication_logs').insert({
-    organization_id: 'placeholder-org-id',
-    channel: 'email',
-    direction: 'outbound',
-    status: 'bounced',
-    metadata: data
-  })
+  // Log bounced email - zapier_task_id helps link to original outbound message
+  if (data.zapier_task_id) {
+    await supabase
+      .from('communication_logs')
+      .update({
+        status: 'bounced',
+        metadata: { ...data, bounce_reason: data.reason }
+      })
+      .eq('zapier_task_id', data.zapier_task_id)
+  } else {
+    // Log as standalone bounce record
+    await supabase.from('communication_logs').insert({
+      channel: 'email',
+      direction: 'outbound',
+      status: 'bounced',
+      metadata: data
+    })
+  }
 
   return NextResponse.json({ processed: true })
 }
 
 async function handleEmailSent(data: any, supabase: any) {
-  // Update communication log status
+  // Update communication log status to confirm delivery
   if (data.zapier_task_id) {
     await supabase
       .from('communication_logs')
-      .update({ status: 'sent' })
+      .update({
+        status: 'sent',
+        sent_at: new Date().toISOString(),
+        metadata: { ...data }
+      })
       .eq('zapier_task_id', data.zapier_task_id)
   }
 
