@@ -196,7 +196,7 @@ export class WorkflowEngine {
     }
 
     // Create communication log entry
-    const zapierTaskId = `workflow_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    const workflowTaskId = `workflow_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
     const { data: communicationLog, error } = await this.supabase
       .from('communication_logs')
@@ -210,7 +210,7 @@ export class WorkflowEngine {
         subject: (generatedContent as any).subject,
         content: (generatedContent as any).content,
         ai_generated: true,
-        zapier_task_id: zapierTaskId,
+        external_id: workflowTaskId,
         scheduled_send_at: new Date().toISOString(),
         metadata: {
           workflow_step_id: step.id,
@@ -248,7 +248,7 @@ export class WorkflowEngine {
 
     return {
       communication_id: communicationLog.id,
-      zapier_task_id: zapierTaskId,
+      workflow_task_id: workflowTaskId,
       ai_cost: aiResult.cost,
       content_generated: true
     }

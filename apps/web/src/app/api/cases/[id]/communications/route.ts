@@ -192,8 +192,8 @@ export async function POST(
       )
     }
 
-    // Generate zapier task ID for tracking
-    const zapierTaskId = `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    // Generate communication ID for tracking
+    const communicationId = `comm_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
     // Create communication log entry
     const { data: communicationLog, error: logError } = await supabase
@@ -208,7 +208,7 @@ export async function POST(
         subject: (generatedContent as any).subject,
         content: (generatedContent as any).content,
         ai_generated: true,
-        zapier_task_id: zapierTaskId,
+        external_id: communicationId,
         scheduled_send_at: communicationData.scheduled_send_at || (communicationData.send_immediately ? new Date().toISOString() : null),
         metadata: {
           communication_type: communicationData.type,
